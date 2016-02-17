@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		488093271C74C073003FEDE3 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 488093261C74C073003FEDE3 /* main.m */; };
+		488093341C74C2AC003FEDE3 /* pass_file.c in Sources */ = {isa = PBXBuildFile; fileRef = 488093301C74C2AC003FEDE3 /* pass_file.c */; };
+		488093351C74C2AC003FEDE3 /* types.c in Sources */ = {isa = PBXBuildFile; fileRef = 488093321C74C2AC003FEDE3 /* types.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,6 +27,13 @@
 /* Begin PBXFileReference section */
 		488093231C74C073003FEDE3 /* git_test */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = git_test; sourceTree = BUILT_PRODUCTS_DIR; };
 		488093261C74C073003FEDE3 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		4880932D1C74C2AC003FEDE3 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
+		4880932E1C74C2AC003FEDE3 /* lists.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lists.h; sourceTree = "<group>"; };
+		4880932F1C74C2AC003FEDE3 /* objects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = objects.h; sourceTree = "<group>"; };
+		488093301C74C2AC003FEDE3 /* pass_file.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = pass_file.c; sourceTree = "<group>"; };
+		488093311C74C2AC003FEDE3 /* pass_file.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pass_file.h; sourceTree = "<group>"; };
+		488093321C74C2AC003FEDE3 /* types.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = types.c; sourceTree = "<group>"; };
+		488093331C74C2AC003FEDE3 /* types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +50,13 @@
 		4880931A1C74C073003FEDE3 = {
 			isa = PBXGroup;
 			children = (
+				4880932D1C74C2AC003FEDE3 /* common.h */,
+				4880932E1C74C2AC003FEDE3 /* lists.h */,
+				4880932F1C74C2AC003FEDE3 /* objects.h */,
+				488093301C74C2AC003FEDE3 /* pass_file.c */,
+				488093311C74C2AC003FEDE3 /* pass_file.h */,
+				488093321C74C2AC003FEDE3 /* types.c */,
+				488093331C74C2AC003FEDE3 /* types.h */,
 				488093251C74C073003FEDE3 /* git_test */,
 				488093241C74C073003FEDE3 /* Products */,
 			);
@@ -118,6 +134,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				488093351C74C2AC003FEDE3 /* types.c in Sources */,
+				488093341C74C2AC003FEDE3 /* pass_file.c in Sources */,
 				488093271C74C073003FEDE3 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

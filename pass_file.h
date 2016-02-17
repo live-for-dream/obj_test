@@ -3,7 +3,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "types.h"
-#include "hash.h"
 #include "objects.h"
 #include <sys/types.h>
 #include <dirent.h>
