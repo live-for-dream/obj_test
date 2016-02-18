@@ -10,6 +10,7 @@
 #define passwd          "testabcd"
 
 #define dir_mode        0755
+#define file_mode       0755
 
 void decryption(record_t *record, char *passwd) {
     printf("record passwd:\n%s\n", record->passwd_ciper.str);
@@ -46,6 +47,24 @@ static obj_attr_t record_attr = {
     .type = obj_type_rcd,
     .build = NULL
 };
+
+
+#define set_user_dirty(usr)\
+    (usr)->dirty = true;\
+    list_add(&(usr)->dirty_queue, &dirty_queue)
+#define clean_user_dirty(usr)\
+        (usr)->dirty = false;\
+        list_del(&(usr)->dirty_queue)
+
+static int show_childs(object_t *obj);
+static void get_class_path(object_t *obj, string_t *path) ;
+static void get_user_path(object_t *obj, string_t *path);
+static int create_class(object_t *parent, create_args_t *arg);
+static int create_user(object_t *parent, create_args_t *arg);
+static int write_file(int fd, char *buf, ssize_t size, off_t off);
+static int read_file(int fd, char *buf, ssize_t size,off_t off);
+
+
 
 int init_root(string_t *path) {
     char                ab_path[PATH_MAX + 1];
@@ -115,6 +134,15 @@ static void get_class_path(object_t *obj, string_t *path) {
     sprintf((char *)path->str + path->len, "/%s", (char *)cla->path.str);
     path->len += 1 + cla->path.len;
     return;
+}
+
+static void get_user_path(object_t *obj, string_t *path) {
+    user_t *usr;
+    usr = obj_entry(obj, user_t, obj);
+    
+    get_class_path(obj->parent , path);
+    sprintf((char *)path->str + path->len, "/%s", (char *)usr->file_name.str);
+    path->len += 1 + usr->file_name.len;
 }
 
 int class_build(object_t *obj) {
@@ -215,7 +243,7 @@ static int create_class(object_t *parent, create_args_t *arg) {
 
     path.str = (uchar)ab_path;
     path.len = 0;
-    get_class_path(obj, &path);
+    get_class_path(parent, &path);
 
     cla = malloc(sizeof(class_t));
     if (!cla) {
@@ -229,6 +257,9 @@ static int create_class(object_t *parent, create_args_t *arg) {
         goto CLA_FAIL;
     }
     cla->path.len = arg->name.len;
+    sprintf(cla->path.str, "%s", arg->name.str);
+    sprintf(ab_path + path.len, "/%s", arg->name.str);
+    path.len += 1 + arg->name.len;
     
     dir = opendir(ab_path);
     if (dir) {
@@ -256,7 +287,70 @@ FAIL:
 }
 
 static int create_user(object_t *parent, create_args_t *arg) {
+    string_t         path;
+    char             ab_path[PATH_MAX + 1];
+    char             len_buf[9];
+    user_t          *usr;
+    string_t         file_name;
+    int              ret;
+    int              fd;
+
+    path.str = (uchar)ab_path;
+    path.len = 0;
+    get_class_path(parent, &path);
+
+    usr = malloc(sizeof(user_t));
+    if (!usr) {
+        goto FAIL;
+    }
+    init_user(usr);
+    usr->obj.options = &user_attr;
+
+    ret = string_to_hex(&arg->name, &file_name);
+    if (ret != OK) {
+        goto USR_FAIL;
+    }
+
+    sprintf(ab_path + path.len, "/%s", file_name.str);
+    path.len += 1 + file_name.len;
+
+    ret =  access(ab_path, F_OK);
+    if (!ret || errno != ENOENT) {
+        goto HEX_FAIL;
+    }
+
+    fd = open(ab_path, O_CREAT | O_RDWR, file_mode);
+    if (fd < 0) {
+        goto HEX_FAIL;
+    }
+
+    sprintf(len_buf, "%08d", 0);
+    len_buf[8] = '\0';
+    ret = write_file(fd, len_buf, 8, 0);
+    if (ret != 8) {
+        goto FILE_FAIl;
+    }
+
+    usr->file_name.str = file_name.str
+    usr->file_name.len = file_name.len;
+    usr->record_num = 0;
+    usr->user_name.str = malloc(sizeof(uchar) * (arg->name.len + 1));
+    sprintf(usr->user_name.str, "%s", arg->name.str);
+    usr->user_name.len = arg->name.len;
+
+    add_obj(parent, &usr->obj);
+    close(fd);
     
+    return OK;
+
+FILE_FAIl:
+    close(fd);
+HEX_FAIL:
+    free(file_name.str);
+USR_FAIL:
+    free(usr);
+FAIL:
+    return ERR;
 }
 
 
@@ -297,6 +391,28 @@ static int read_file(int fd, char *buf, ssize_t size,off_t off) {
         read_n += n_read;
     }
     return read_n;
+}
+
+static int write_file(int fd, char *buf, ssize_t size, off_t off) {
+    int         ret;
+    ssize_t     write_n, n_write;
+
+    ret = lseek(fd, off, SEEK_SET);
+    if (ret) {
+        return ERR;
+    }
+
+    write_n = 0;
+    while(write_n < size) {
+        n_write = write(fd, buf + write_n, size - write_n);
+        if (n_write < 0) {
+            return ERR;
+        }
+
+        write_n += n_write;
+    }
+
+    return write_n;
 }
 
 int record_read(int fd, record_t **record_r, off_t off) {
@@ -441,6 +557,70 @@ int user_show_self(object_t *obj) {
 
 int user_show_childs(object_t * obj) {
     return show_childs(obj);
+}
+
+int user_create(object_t *parent, void *data) {
+    create_args_t           *arg;
+    char                     ab_path[PATH_MAX + 1];
+    int                      fd;
+    string_t                 path;
+    record_t                *record;
+    user_t                  *usr;
+    
+    arg = (create_args_t *)data;
+    if (arg->type != obj_type_rcd) {
+        goto FAIL;
+    }
+
+/*
+    path.len = 0;
+    path.str = ab_path;
+    get_user_path(obj, &path);
+
+    fd = open(ab_path, O_RDWR);
+*/
+    record = malloc(sizeof(record_t));
+    if (!record) {
+        goto FAIL;
+    }
+
+    init_record(record);
+    if (arg->other.len) {
+        record->other.str = malloc(sizeof(uchar) * (arg->other.len + 1));
+        if (!record->other.str) {
+            goto REC_FAIL;
+        }
+        record->other.len = arg->other.len;
+    }
+
+    //should encryption, now we opmitted it
+    if (arg->plain.len) {
+        record->passwd_ciper.str = malloc(sizeof(uchar) * (arg->other.len + 1));
+        if (!record->passwd_ciper.str) {
+            goto OTH_FAIL;
+        }
+        sprintf(record->passwd_ciper.str, "%s", arg->plain.str);
+        record->passwd_ciper.len = arg->plain.len;
+    }
+
+    init_obj(&record->obj);
+    record->obj.options = &record_attr;
+    add_obj(parent, &record->obj);
+
+    usr = obj_entry(parent, user_t, obj);
+    if (!usr->dirty) {
+        set_user_dirty(usr);
+    }
+
+    return OK;
+OTH_FAIL:
+    if (record->other.len) {
+        free(record->other.str);
+    }
+REC_FAIL:
+    free(record);
+FAIL:
+    return ERR;
 }
 
 int record_show_self(object_t *obj) {

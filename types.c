@@ -1,6 +1,6 @@
 #include "types.h"
 
-int string_to_hex(string_t str, string_t hex) {
+int string_to_hex(string_t *str, string_t *hex) {
     int i;
     
     if (!str || !str->len || !hex) {
@@ -21,7 +21,7 @@ int string_to_hex(string_t str, string_t hex) {
     return OK;
 }
  
-int hex_to_string(string_t str, string_t hex) {
+int hex_to_string(string_t *str, string_t *hex) {
     int i;
     uchar tmp;
 

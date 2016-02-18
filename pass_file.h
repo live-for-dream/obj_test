@@ -14,10 +14,14 @@ total_len username_len username passwd_len passworld other_len other
 #define md5_len         33;
 
 typedef struct record_s record_t;
+#define true            1
+#define false           0
 
 typedef struct create_args_s {
     int         type;
     string_t    name;
+    string_t    other;
+    string_t    plain;
 } create_args_t;
 
 struct record_s {
@@ -67,7 +71,7 @@ struct class_s {
     init_string(&(cla)->name);\
     init_string(&(cla)->path);\
     (cla)->dir = NULL
-
+    
 int insert_record();
 int record_read(int fd, record_t **record_r, off_t off);
 int start_record_tree(string_t path);
@@ -75,13 +79,13 @@ int start_record_tree(string_t path);
 int class_build(object_t *obj);
 int class_show_self(object_t *obj);
 int class_show_child(object_t *obj);
+int class_create(object_t *parent, void *data) ;
 
 int user_build(object_t *obj);
 int user_show_self(object_t *obj);
 int user_show_childs(object_t * obj);
+int user_create(object_t *parent, void *data);
 
-int user_show_self(object_t *obj);
-int user_show_childs(object_t * obj);
 int record_show_self(object_t *obj);
 
 #endif
