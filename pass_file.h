@@ -58,7 +58,7 @@ struct class_s {
     (record)->total_len = (record)->next_off = 0;\
     init_obj(&record->obj)
 
-#define init_user(usr) \
+#define init_users(usr) \
     init_obj(&(usr)->obj);\
     init_string(&(usr)->user_name);\
     init_string(&(usr)->file_name);\
@@ -66,15 +66,23 @@ struct class_s {
     (usr)->record_num = 0;\
     (usr)->dirty = 0
     
-#define init_class(cla) \
+
+#define init_cla(cla) \
     init_obj(&(cla)->obj);\
     init_string(&(cla)->name);\
     init_string(&(cla)->path);\
     (cla)->dir = NULL
-    
+ 
+/*
+#define init_class(cla) \
+    init_obj(&((cla)->obj));\
+    init_string(&((cla)->name));\
+    init_string(&((cla)->path));\
+    (cla)->dir = NULL
+*/
 int insert_record();
 int record_read(int fd, record_t **record_r, off_t off);
-int start_record_tree(string_t path);
+int start_record_tree(string_t *path);
 
 int class_build(object_t *obj);
 int class_show_self(object_t *obj);

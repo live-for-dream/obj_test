@@ -1,9 +1,14 @@
 #include "pass_file.h"
+#ifdef _LINUX
 #include <linux/limits.h>
+#else
+#include <limits.h>
+#endif
 #include <sys/types.h>
 #include <dirent.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #define max_other_len 2048
 #define max_cipher_len 2048
@@ -12,7 +17,7 @@
 #define dir_mode        0755
 #define file_mode       0755
 
-void decryption(record_t *record, char *passwd) {
+void decryption(record_t *record, char * password) {
     printf("record passwd:\n%s\n", record->passwd_ciper.str);
 }
 /*
@@ -27,7 +32,7 @@ struct obj_attr_s {
 
 */
 
-class_t  root;
+class_t  class_root;
 list_head_t dirty_queue;
 static obj_attr_t cla_attr = {
     .type = obj_type_cla,
@@ -39,7 +44,7 @@ static obj_attr_t cla_attr = {
 
 static obj_attr_t user_attr = {
     .type = obj_type_usr,
-    .
+    .create = user_create,
     .build = user_build
 };
 
@@ -66,6 +71,7 @@ static int read_file(int fd, char *buf, ssize_t size,off_t off);
 
 
 
+/*
 int init_root(string_t *path) {
     char                ab_path[PATH_MAX + 1];
     if (!path) {
@@ -77,7 +83,7 @@ int init_root(string_t *path) {
 
     
 }
-
+*/
 int start_record_tree(string_t *path) {
     char                ab_path[PATH_MAX + 1];
     int                 p_len;
@@ -94,22 +100,22 @@ int start_record_tree(string_t *path) {
         ab_path[path->len] = '\0';
     }
 
-    p_len = strlen(ab_path);
-    init_class(&root);
-    root.path.len = p_len;
-    root.path.str = malloc(sizeof(uchar) *p_len + 1);
-    if (!root.path.str) {
+    p_len = (int)strlen(ab_path);
+    init_cla(&class_root);
+    class_root.path.len = p_len;
+    class_root.path.str = malloc(sizeof(uchar) *p_len + 1);
+    if (!class_root.path.str) {
         return ERR_NOMEM;
     }
-    sprintf((char *)root.path.str, "%s", ab_path);
-    root.path.str[p_len] = '\0';
+    sprintf((char *)class_root.path.str, "%s", ab_path);
+    class_root.path.str[p_len] = '\0';
     
     dir = opendir(ab_path);
     if (!dir) {
         return ERR;
     }
 
-    root.dir = dir;
+    class_root.dir = dir;
     while((p_dirent=readdir(dir))) {
         if (p_dirent->d_type & DT_REG) {
             
@@ -119,10 +125,12 @@ int start_record_tree(string_t *path) {
         printf("%s\n",p_dirent->d_name);
     }
     
+    return OK;
 }
 
 static void get_class_path(object_t *obj, string_t *path) {
-    class_t *cla; 
+    class_t         *cla;
+    
     cla = obj_entry(obj, class_t, obj);
     if (!obj->parent) {
         sprintf((char *)path->str, "%s", (char *)cla->path.str);
@@ -145,7 +153,7 @@ static void get_user_path(object_t *obj, string_t *path) {
     path->len += 1 + usr->file_name.len;
 }
 
-int class_build(object_t *obj) {
+int class_build(object_t *prt_obj) {
     class_t            *cla;
     class_t            *new_cla;
     user_t             *new_user;
@@ -156,10 +164,10 @@ int class_build(object_t *obj) {
     string_t            hex_name;
     
     
-    path.str = (uchar)ab_path;
+    path.str = (uchar *)ab_path;
     path.len = 0;
-    cla = obj_entry(obj, class_t, obj);
-    get_class_path(obj, &path);
+    cla = obj_entry(prt_obj, class_t, obj);
+    get_class_path(prt_obj, &path);
 
     dir = opendir(ab_path);
     if (!dir) {
@@ -185,7 +193,7 @@ int class_build(object_t *obj) {
 
             sprintf(new_cla->path.str, "%s", p_dirent->d_name);
             init_obj(&new_cla->obj);
-            add_obj(obj, &new_cla->obj);
+            add_obj(prt_obj, &new_cla->obj);
             new_cla->obj.options = &cla_attr;
             new_cla->obj.options->build(&new_cla->obj);
         } else if (p_dirent->d_type & DT_REG) {
@@ -202,7 +210,7 @@ int class_build(object_t *obj) {
             sprintf(new_user->file_name.str, "%s", p_dirent->d_name);
             
             init_obj(&new_user->obj);
-            add_obj(obj, &new_user->obj);
+            add_obj(prt_obj, &new_user->obj);
             new_user->obj.options = &user_attr;
             //new_user->obj.options->build(&new_user->obj);
         } else {
@@ -221,8 +229,8 @@ int class_show_self(object_t *obj) {
 }
 
 static int show_childs(object_t *obj) {
-    object_t *next_obj;
-    int ret
+    object_t    *next_obj;
+    int         ret;
     list_for_each_entry(next_obj, &obj->childs, childs) {
         ret = next_obj->options->show_self(next_obj);
         if (ret != OK) {
@@ -249,7 +257,7 @@ static int create_class(object_t *parent, create_args_t *arg) {
     if (!cla) {
         goto FAIL;
     }
-    init_class(cla);
+    init_cla(cla);
     cla->obj.options = &cla_attr;
     
     cla->path.str = malloc((arg->name.len + 1) * sizeof(char));
@@ -303,7 +311,7 @@ static int create_user(object_t *parent, create_args_t *arg) {
     if (!usr) {
         goto FAIL;
     }
-    init_user(usr);
+    init_users(usr);
     usr->obj.options = &user_attr;
 
     ret = string_to_hex(&arg->name, &file_name);
