@@ -1,14 +1,9 @@
 #include "pass_file.h"
-#ifdef _LINUX
 #include <linux/limits.h>
-#else
-#include <limits.h>
-#endif
 #include <sys/types.h>
 #include <dirent.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include <errno.h>
 
 #define max_other_len 2048
 #define max_cipher_len 2048
@@ -17,7 +12,7 @@
 #define dir_mode        0755
 #define file_mode       0755
 
-void decryption(record_t *record, char * password) {
+void decryption(record_t *record, char *passwd) {
     printf("record passwd:\n%s\n", record->passwd_ciper.str);
 }
 /*
@@ -32,19 +27,23 @@ struct obj_attr_s {
 
 */
 
-class_t  class_root;
+class_t  root;
 list_head_t dirty_queue;
 static obj_attr_t cla_attr = {
     .type = obj_type_cla,
-    .create = NULL,
+    .create = class_create,
     .show_self = class_show_self,
     .show_childs = class_show_child,
+    .write = class_write,
     .build = class_build
 };
 
 static obj_attr_t user_attr = {
     .type = obj_type_usr,
     .create = user_create,
+    .show_self = user_show_self,
+    .show_childs = user_show_childs,
+    .write = user_write,
     .build = user_build
 };
 
@@ -71,7 +70,6 @@ static int read_file(int fd, char *buf, ssize_t size,off_t off);
 
 
 
-/*
 int init_root(string_t *path) {
     char                ab_path[PATH_MAX + 1];
     if (!path) {
@@ -83,7 +81,7 @@ int init_root(string_t *path) {
 
     
 }
-*/
+
 int start_record_tree(string_t *path) {
     char                ab_path[PATH_MAX + 1];
     int                 p_len;
@@ -100,22 +98,22 @@ int start_record_tree(string_t *path) {
         ab_path[path->len] = '\0';
     }
 
-    p_len = (int)strlen(ab_path);
-    init_cla(&class_root);
-    class_root.path.len = p_len;
-    class_root.path.str = malloc(sizeof(uchar) *p_len + 1);
-    if (!class_root.path.str) {
+    p_len = strlen(ab_path);
+    init_class(&root);
+    root.path.len = p_len;
+    root.path.str = malloc(sizeof(uchar) *p_len + 1);
+    if (!root.path.str) {
         return ERR_NOMEM;
     }
-    sprintf((char *)class_root.path.str, "%s", ab_path);
-    class_root.path.str[p_len] = '\0';
+    sprintf((char *)root.path.str, "%s", ab_path);
+    root.path.str[p_len] = '\0';
     
     dir = opendir(ab_path);
     if (!dir) {
         return ERR;
     }
 
-    class_root.dir = dir;
+    root.dir = dir;
     while((p_dirent=readdir(dir))) {
         if (p_dirent->d_type & DT_REG) {
             
@@ -125,12 +123,10 @@ int start_record_tree(string_t *path) {
         printf("%s\n",p_dirent->d_name);
     }
     
-    return OK;
 }
 
 static void get_class_path(object_t *obj, string_t *path) {
-    class_t         *cla;
-    
+    class_t *cla; 
     cla = obj_entry(obj, class_t, obj);
     if (!obj->parent) {
         sprintf((char *)path->str, "%s", (char *)cla->path.str);
@@ -153,7 +149,7 @@ static void get_user_path(object_t *obj, string_t *path) {
     path->len += 1 + usr->file_name.len;
 }
 
-int class_build(object_t *prt_obj) {
+int class_build(object_t *obj) {
     class_t            *cla;
     class_t            *new_cla;
     user_t             *new_user;
@@ -164,10 +160,10 @@ int class_build(object_t *prt_obj) {
     string_t            hex_name;
     
     
-    path.str = (uchar *)ab_path;
+    path.str = (uchar)ab_path;
     path.len = 0;
-    cla = obj_entry(prt_obj, class_t, obj);
-    get_class_path(prt_obj, &path);
+    cla = obj_entry(obj, class_t, obj);
+    get_class_path(obj, &path);
 
     dir = opendir(ab_path);
     if (!dir) {
@@ -193,7 +189,7 @@ int class_build(object_t *prt_obj) {
 
             sprintf(new_cla->path.str, "%s", p_dirent->d_name);
             init_obj(&new_cla->obj);
-            add_obj(prt_obj, &new_cla->obj);
+            add_obj(obj, &new_cla->obj);
             new_cla->obj.options = &cla_attr;
             new_cla->obj.options->build(&new_cla->obj);
         } else if (p_dirent->d_type & DT_REG) {
@@ -210,7 +206,7 @@ int class_build(object_t *prt_obj) {
             sprintf(new_user->file_name.str, "%s", p_dirent->d_name);
             
             init_obj(&new_user->obj);
-            add_obj(prt_obj, &new_user->obj);
+            add_obj(obj, &new_user->obj);
             new_user->obj.options = &user_attr;
             //new_user->obj.options->build(&new_user->obj);
         } else {
@@ -229,8 +225,8 @@ int class_show_self(object_t *obj) {
 }
 
 static int show_childs(object_t *obj) {
-    object_t    *next_obj;
-    int         ret;
+    object_t *next_obj;
+    int ret
     list_for_each_entry(next_obj, &obj->childs, childs) {
         ret = next_obj->options->show_self(next_obj);
         if (ret != OK) {
@@ -257,7 +253,7 @@ static int create_class(object_t *parent, create_args_t *arg) {
     if (!cla) {
         goto FAIL;
     }
-    init_cla(cla);
+    init_class(cla);
     cla->obj.options = &cla_attr;
     
     cla->path.str = malloc((arg->name.len + 1) * sizeof(char));
@@ -311,7 +307,7 @@ static int create_user(object_t *parent, create_args_t *arg) {
     if (!usr) {
         goto FAIL;
     }
-    init_users(usr);
+    init_user(usr);
     usr->obj.options = &user_attr;
 
     ret = string_to_hex(&arg->name, &file_name);
@@ -361,6 +357,23 @@ FAIL:
     return ERR;
 }
 
+int class_write(object_t *obj) {
+    int             ret;
+    user_t         *usr;
+    if (list_empty(&dirty_queue)) {
+        return 0;
+    }
+    
+    (void *)obj;
+    list_for_each_entry(usr, &dirty_queue, dirty_queue) {
+        ret = usr->obj.options->write(&usr->obj);
+        if (ret < 0) {
+            printf("user write err\n");
+        }
+    }
+
+    return ret;
+}
 
 int class_create(object_t *parent, void *data) {
     create_args_t   *arg;
@@ -510,6 +523,63 @@ FAIL:
     return ERR;
 }
 
+
+static int record_write(int fd, record_t *record, off_t off) {
+    char         len_buf[9];
+    char        *str;
+    ssize_t      size;
+    int          ret;
+    int          write_n = 0;
+
+    sprintf(len_buf, "%08d", record->passwd_ciper.len);
+    ret = write_file(fd, len_buf, 8, off);
+    if (ret != 8) {
+        goto FAIL;
+    }
+
+    write_n += ret;
+    off += 8;
+
+    size = record->passwd_ciper.len;
+    str = record->passwd_ciper.str;
+    ret = write_file(fd, str, size, off);
+    if (ret != size) {
+        goto FAIL;
+    }
+
+    write_n += size;
+    off += size;
+
+    sprintf(len_buf, "%08d", record->other.len);
+    ret = write_file(fd, len_buf, 8, off);
+    if (ret != 8) {
+        goto FAIL;
+    }
+
+    write_n += ret;
+    off += 8;
+
+    if (!record->other.len) {
+        goto OUT;
+    }
+
+    size = record->other.len;
+    str = record->other.str;
+    ret = write_file(fd, str, size, off);
+    if (ret != size) {
+        goto FAIL;
+    }
+
+    write_n += size;
+    off += size;
+
+OUT:
+    return write_n;
+
+FAIL:
+    retrun ERR;
+}
+
 int user_build(object_t *obj) {
     user_t             *usr;
     char                ab_path[PATH_MAX + 1];
@@ -631,6 +701,61 @@ FAIL:
     return ERR;
 }
 
+
+int user_write(object_t *obj) {
+    int             ret;
+    int             fd;
+    user_t         *usr;
+    record_t       *record;
+    char            ab_path[PATH_MAX + 1];
+    char            len_buff[9];
+    string_t        path;
+    off_t           off;
+    int             write_n;
+
+    usr = obj_entry(obj, user_t, obj);
+    path.len = 0;
+    path.str = ab_path;
+    get_user_path(object_t * obj,string_t * path);
+
+    fd = open(path.str, O_RDWR | O_TRUNC);
+    if (fd < 0) {
+        goto FAIL;
+    }
+
+    off = 0;
+    sprintf(len_buff, "%08d", usr->record_num);
+    write_n = write_file(fd, len_buff, 8, off);
+    if (write_n != 8) {
+        goto FD_FAIL;
+    }
+
+    off += 8;
+    list_for_each_entry(record, &obj->childs, obj) {
+        ret = record_write(fd, record, off);
+        if (ret < 0) {
+            goto FD_FAIL;
+        }
+        off += ret;
+    }
+
+    list_del(&usr->dirty_queue);
+
+    close(fd);
+    return OK;
+
+FD_FAIL:
+    close(fd);
+FAIL:
+    return ERR;
+}
+
+
+int user_del(object_t *obj){
+    
+}
+
+
 int record_show_self(object_t *obj) {
     record_t            *record;
 
@@ -640,4 +765,27 @@ int record_show_self(object_t *obj) {
     decryption(record, passwd);
     return OK;
 }
+
+int record_del(object_t *obj) {
+    user_t          *usr;
+    record_t        *record;
+    usr = obj_entry(obj->parent, user_t, obj);
+    list_del(&obj->sibling);
+    if (!usr->dirty) {
+        set_user_dirty(usr);
+    }
+
+    record = obj_entry(obj->parent, record_t, obj);
+    if (record->other.len) {
+        free(record->other.str);
+    }
+    if (record->passwd_ciper.len) {
+        free(record->passwd_ciper.str);
+    }
+
+    free(record);
+    
+    return OK;
+}
+
 

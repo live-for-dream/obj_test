@@ -8,7 +8,8 @@
 #include <dirent.h>
 
 /*file layout nextoff is for the same username;
-total_len username_len username passwd_len passworld other_len other 
+record_num 
+passwd_len passworld other_len other 
 ...
 */
 #define md5_len         33;
@@ -58,7 +59,7 @@ struct class_s {
     (record)->total_len = (record)->next_off = 0;\
     init_obj(&record->obj)
 
-#define init_users(usr) \
+#define init_user(usr) \
     init_obj(&(usr)->obj);\
     init_string(&(usr)->user_name);\
     init_string(&(usr)->file_name);\
@@ -66,34 +67,32 @@ struct class_s {
     (usr)->record_num = 0;\
     (usr)->dirty = 0
     
-
-#define init_cla(cla) \
+#define init_class(cla) \
     init_obj(&(cla)->obj);\
     init_string(&(cla)->name);\
     init_string(&(cla)->path);\
     (cla)->dir = NULL
- 
-/*
-#define init_class(cla) \
-    init_obj(&((cla)->obj));\
-    init_string(&((cla)->name));\
-    init_string(&((cla)->path));\
-    (cla)->dir = NULL
-*/
+    
 int insert_record();
 int record_read(int fd, record_t **record_r, off_t off);
-int start_record_tree(string_t *path);
+int start_record_tree(string_t path);
 
 int class_build(object_t *obj);
 int class_show_self(object_t *obj);
 int class_show_child(object_t *obj);
-int class_create(object_t *parent, void *data) ;
+int class_create(object_t *parent, void *data);
+int class_write(object_t *obj);
+int class_del(object_t *obj);
+
 
 int user_build(object_t *obj);
 int user_show_self(object_t *obj);
 int user_show_childs(object_t * obj);
 int user_create(object_t *parent, void *data);
+int user_write(object_t *obj);
+int user_del(object_t *obj);
 
 int record_show_self(object_t *obj);
+int record_del(object_t *obj);
 
 #endif

@@ -7,7 +7,7 @@ int string_to_hex(string_t *str, string_t *hex) {
         return ERR_NULL;
     }
 
-    hex->str = (uchar *)malloc(sizeof(uchar) * str->len * 2 + 1);
+    hex->str = malloc(sizeof(uchar) * str->len * 2 + 1);
     if (!hex->str) {
         return ERR_NOMEM;
     }
@@ -29,7 +29,7 @@ int hex_to_string(string_t *str, string_t *hex) {
         return ERR_NULL;
     }
 
-    str->str = (uchar *)malloc(sizeof(uchar) * hex->len / 2 + 1);
+    str->str = malloc(sizeof(uchar) * hex->len / 2 + 1);
     if (!str->str) {
         return ERR_NOMEM;
     }

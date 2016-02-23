@@ -13,20 +13,19 @@ typedef struct string_s {
     uint             len;
 } string_t;
 
-/*
 typedef struct hash_s {
     size_t      size;
     elements    *elt;
 } hash_t;
-*/
+
 #define init_string(str)\
     str.str = NULL;\
     str.len = 0
 #define NULL_STRING(name)\
     string_t name = {.str = NULL, .len = 0}
 
-int string_to_hex(string_t *str, string_t *hex);
-int hex_to_string(string_t *str, string_t *hex);
+int string_to_hex(string_t str, string_t hex);
+int hex_to_string(string_t str, string_t hex); 
 
 
 

@@ -20,6 +20,7 @@ struct obj_attr_s {
     obj_op      show_self;
     obj_op      show_childs;
     obj_op      del;
+    obj_op      write;
     obj_op      build;
 };
 
@@ -43,9 +44,9 @@ struct object_s {
     INIT_LIST_HEAD(&(obj)->childs);\
     (obj)->options = NULL
 
-#define add_obj(prt, child) \
-    (child)->parent = (prt);\
-    list_add(&(child)->sibling, &(prt)->childs)
+#define add_obj(parent, child) \
+    (child)->parent = (parent);\
+    list_add(&(child)->sibling, &(parent)->childs)
 
 #define del_obj(child)\
     list_del(&(child)->sibling);\
