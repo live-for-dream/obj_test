@@ -393,6 +393,56 @@ int class_create(object_t *parent, void *data) {
 int class_show_child(object_t * obj) {
     return show_childs(obj);
 }
+
+int class_del(object_t *obj){
+    class_t         *cla;
+    object_t        *child_obj;
+    string_t         path;
+    char             ab_path[PATH_MAX + 1];
+
+    list_for_each_entry(child_obj, obj->childs, sibling) {
+        if (child_obj->options->type == obj_type_cla) {
+            ret = class_del(child_obj);
+            if (ret != OK) {
+                return ERR;
+            }
+        } else if (child_obj->options->type == obj_type_usr) {
+            ret = user_del(child_obj);
+            if (ret != OK) {
+                return ERR;
+            }
+        } else {
+            return ERR;
+        }
+    }
+
+    cla = obj_entry(obj, class_t, obj);
+    path.len = 0;
+    path.str = ab_path;
+    get_class_path(obj, &path);
+
+    list_del(obj->sibling);
+    ret = closedir(cla->dir);
+    if (!ret) {
+        printf("close_dir fail\n");
+    }
+
+    ret = rmdir(ab_path);
+    if (!ret) {
+        return ERR;
+    }
+
+    if (cla->path.len) {
+        free(cla->path.str);
+    }
+
+    if (cla->name.len) {
+        free(cla->name.str);
+    }
+
+    return OK;
+}
+
 static int read_file(int fd, char *buf, ssize_t size,off_t off) {
     int ret;
     ssize_t read_n, n_read;
@@ -752,7 +802,43 @@ FAIL:
 
 
 int user_del(object_t *obj){
+    int         ret;
+    object_t   *child_obj;
+    user_t     *usr;
+    char        ab_path[PATH_MAX + 1];
+    string_t    path;
     
+    list_for_each_entry(child_obj, &obj->childs, sibling) {
+        ret = record_del(child_obj);
+        if (ret != OK) {
+            return ERR;
+        }
+    }
+
+    usr = obj_entry(obj, user_t, obj);
+    path.str = ab_path;
+    path.len = 0;
+
+    list_del(&obj->sibling);
+    list_del(&usr->dirty_queue);
+    get_user_path(obj, &path);
+    
+    ret = unlink(ab_path);
+    if (!ret) {
+        return ERR;
+    }
+
+    if (usr->file_name.len) {
+        free(usr->file_name.str);
+    }
+
+    if (usr->user_name.len) {
+        free(usr->user_name.str);
+    }
+
+    free(usr);
+
+    return OK;
 }
 
 
@@ -788,4 +874,69 @@ int record_del(object_t *obj) {
     return OK;
 }
 
+int record_change(object_t *obj, void *data) {
+    change_asgs_t           *arg;
+    record_t                *record;
+    uchar                   *str;
+    string_t                 oth_str;
+    string_t                 cip_str;
+    user_t                  *usr;
+
+    arg = (change_asgs_t *)data;
+    if (arg->type != obj_type_rcd) {
+        goto FAIL;
+    }
+
+    record = obj_entry(obj, record_t, obj);
+    if (arg->other.len) {
+        str = malloc(sizeof(char) * (arg->other.len + 1));
+        if (!str) {
+            goto FAIL;
+        }
+        sprintf(str, "%s", arg->other.str);
+        //free(record->other.str);
+        oth_str.str = record->other.str;
+        oth_str.len = record->other.len;
+        record->other.str = str;
+        record->other.len = arg->other.len;
+    }
+
+    init_string(&oth_str);
+    init_string(&cip_str);
+
+    if (arg->cipher.len) {
+        str = malloc(sizeof(char) * (arg->cipher.len + 1));
+        if (!str) {
+            goto OTH_FAIL;
+        }
+        sprintf(str, "%s", arg->cipher.str);
+        //free(record->passwd_ciper.str);
+        cip_str.str = record->passwd_ciper.str;
+        cip_str.len = record->passwd_ciper.len;
+        record->passwd_ciper.str= str;
+        record->passwd_ciper.len = arg->cipher.len;
+    }
+
+    usr = obj_entry(obj->parent, user_t, obj);
+    if (!usr->dirty) {
+        set_user_dirty(usr);
+    }
+
+    if (oth_str.len) {
+        free(oth_str.str);
+    }
+
+    if (cip_str.len) {
+        free(cip_str.str);
+    }
+
+    return OK;
+
+OTH_FAIL:
+    free(record->other.str);
+    record->other.str = oth_str.str;
+    record->other.len = oth_str.len;
+FAIL:
+    return ERR;
+}
 

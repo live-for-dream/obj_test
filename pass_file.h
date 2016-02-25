@@ -25,6 +25,14 @@ typedef struct create_args_s {
     string_t    plain;
 } create_args_t;
 
+typedef struct change_asgs_s {
+    int         type;
+    string_t    name;
+    string_t    other;
+    string_t    cipher;
+    void       *info;
+} change_asgs_t;
+
 struct record_s {
     object_t    obj;
     uint        total_len;
@@ -83,7 +91,7 @@ int class_show_child(object_t *obj);
 int class_create(object_t *parent, void *data);
 int class_write(object_t *obj);
 int class_del(object_t *obj);
-
+int class_move(object_t *obj, object_t *parent);
 
 int user_build(object_t *obj);
 int user_show_self(object_t *obj);
@@ -91,8 +99,10 @@ int user_show_childs(object_t * obj);
 int user_create(object_t *parent, void *data);
 int user_write(object_t *obj);
 int user_del(object_t *obj);
+int usr_move(object_t *obj, object_t *parent);
 
 int record_show_self(object_t *obj);
 int record_del(object_t *obj);
+int record_change(object_t *obj, void *data);
 
 #endif
