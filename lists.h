@@ -42,6 +42,11 @@ static inline void list_del(list_head_t *entry) {
 	entry->prev = NULL;
 }
 
+static inline void list_replace(list_head_t *new, list_head_t *old) {
+    list_add(new, old);
+    list_del(old);
+}
+
 static inline int list_empty(const list_head_t *head) {
 	return head->next == head;
 }

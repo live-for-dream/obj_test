@@ -841,6 +841,76 @@ int user_del(object_t *obj){
     return OK;
 }
 
+int usr_move(object_t *obj, void *new_parent) {
+    user_t          *new_usr;
+    user_t          *old_usr;
+    int              ret;
+    char             ab_path[PATH_MAX + 1];
+    string_t         path;
+    
+    if (parent->options->type != obj_type_cla) {
+        goto FAIL;
+    }
+
+    old_usr = obj_entry(obj, user_t, obj);
+    new_usr = malloc(sizeof(user_t));
+    if (!new_usr) {
+        goto FAIL;
+    }
+
+    init_user(new_usr);
+    if (old_usr->file_name.len) {
+        new_usr->file_name.str = malloc(sizeof(char) * (old_usr->file_name.len + 1));
+        if (!new_usr->file_name.str) {
+            goto USR_FAIL;
+        }
+
+        sprintf(new_usr->file_name.str, "%s", old_usr->file_name.str);
+        new_usr->file_name.len = old_usr->file_name.len;
+    }
+
+    if (old_usr->user_name.len) {
+        new_usr->user_name.str = malloc(sizeof(char) * (old_usr->user_name.len + 1));
+        if (!new_usr->user_name.str) {
+            goto FILE_FAIL;
+        }
+
+        sprintf(new_usr->user_name.str, "%s", old_usr->user_name.str);
+        new_usr->user_name.len = old_usr->user_name.len;
+    }
+
+    
+    init_string(&path);
+    path.str = ab_path;
+    get_user_path(obj, &path);
+    ret = unlink(ab_path);
+    if (!ret) {
+        goto UNAME_FAIL;
+    }
+    
+    new_usr->record_num = old_usr->record_num;
+    new_usr->obj.options = old_usr->obj.options;
+    new_usr->obj.parent = new_parent;
+    list_replace(&new_usr->obj.childs, &old_usr->obj.childs);
+    list_add(&new_usr->obj.sibling, &new_parent->childs);
+
+    if (old_usr->dirty) {
+        clean_user_dirty(old_usr);
+    }
+
+    set_user_dirty(new_usr);
+    return OK;
+    //list_replace(&new_usr->obj.sl,list_head_t * old)
+
+UNAME_FAIL:
+    free(new_usr->user_name.str);
+FILE_FAIL:
+    free(new_usr->file_name.str);
+USR_FAIL:
+    free(new_usr);
+FAIL:
+    return ERR;
+}
 
 int record_show_self(object_t *obj) {
     record_t            *record;
