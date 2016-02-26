@@ -80,7 +80,10 @@ struct class_s {
     init_string(&(cla)->name);\
     init_string(&(cla)->path);\
     (cla)->dir = NULL
-    
+
+int init_root(string_t *path);
+object_t *get_root_obj();
+
 int insert_record();
 int record_read(int fd, record_t **record_r, off_t off);
 int start_record_tree(string_t path);
@@ -92,6 +95,7 @@ int class_create(object_t *parent, void *data);
 int class_write(object_t *obj);
 int class_del(object_t *obj);
 int class_move(object_t *obj, object_t *parent);
+object_t *class_lookup(object_t *obj, string_t *name);
 
 int user_build(object_t *obj);
 int user_show_self(object_t *obj);

@@ -72,16 +72,63 @@ static int read_file(int fd, char *buf, ssize_t size,off_t off);
 
 int init_root(string_t *path) {
     char                ab_path[PATH_MAX + 1];
+    char               *str;
+    uchar              *path_str;
+    DIR                *dir;
+    int                 len;
+
+    init_class(&root);
+ 
     if (!path) {
         getcwd(ab_path, sizeof(ab_path));
         if (errno) {
             return ERR;
         }
+
+        len = strlen(ab_path);
+        sprintf(ab_path + len, "/root");
+        len += strlen("/root");  
+    } else {
+        
+        sprintf(ab_path, "%s", path->str);
+        len = path->len;
     }
 
-    
+    path_str = (uchar *)malloc(sizeof(char) * (len + 1));
+    if (!path_str) {
+        return ERR;
+    }
+        
+    sprintf(path_str, "%s", ab_path); 
+
+    root.path.len = root.name.str = path_str;
+    root.path.str = root.name.len = len;
+
+    dir = opendir(ab_path);
+    if (!dir) {
+        if (errno == ENOENT) {
+            ret = mkdir(ab_path, dir_mode);
+            if (ret) {
+                return ERR;
+            }
+
+            dir = opendir(ab_path);
+            if (!dir) {
+                return ERR;
+            }
+        }
+    }
+
+    root.dir = dir;
+    root.obj.options = &cla_attr;    
 }
 
+object_t *get_root_obj() {
+    return &root.obj;
+}
+
+
+/*
 int start_record_tree(string_t *path) {
     char                ab_path[PATH_MAX + 1];
     int                 p_len;
@@ -124,6 +171,7 @@ int start_record_tree(string_t *path) {
     }
     
 }
+*/
 
 static void get_class_path(object_t *obj, string_t *path) {
     class_t *cla; 
@@ -226,7 +274,7 @@ int class_show_self(object_t *obj) {
 
 static int show_childs(object_t *obj) {
     object_t *next_obj;
-    int ret
+    int       ret;
     list_for_each_entry(next_obj, &obj->childs, childs) {
         ret = next_obj->options->show_self(next_obj);
         if (ret != OK) {
@@ -394,7 +442,7 @@ int class_show_child(object_t * obj) {
     return show_childs(obj);
 }
 
-int class_del(object_t *obj){
+int class_del(object_t *obj) {
     class_t         *cla;
     object_t        *child_obj;
     string_t         path;
@@ -442,6 +490,45 @@ int class_del(object_t *obj){
 
     return OK;
 }
+
+object_t *class_lookup(object_t *obj, string_t *name) {
+    class_t         *des_cla;
+    object_t        *des_obj;
+    list_for_each_entry(des_obj, &obj->childs, sibling) {
+        des_cla = obj_entry(des_obj, class_t, obj);
+        if (!strcmp(name, des_cla->name.str)) {
+            return des_obj;
+        }
+    }
+
+    return NULL;
+}
+
+
+/*
+int class_move(object_t *obj, object_t *parent) {
+    int             ret;
+    class_t        *cla;
+    class_t        *parent_cla;
+    object_t       *old_parent;
+    char            ab_path[PATH_MAX + 1];
+    string_t        old_path;
+    string_t        new_path;
+
+    old_parent = obj->parent;
+    if (!old_parent) {
+        goto FAIL;
+    }
+    cla = obj_entry(obj, class_t, obj);
+    parent_cla = obj_entry(parent, class_t, obj);
+    if () {
+        
+    }
+
+FAIL:
+    return ERR;
+}
+*/
 
 static int read_file(int fd, char *buf, ssize_t size,off_t off) {
     int ret;
