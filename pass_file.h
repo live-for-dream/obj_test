@@ -103,7 +103,9 @@ int user_show_childs(object_t * obj);
 int user_create(object_t *parent, void *data);
 int user_write(object_t *obj);
 int user_del(object_t *obj);
-int usr_move(object_t *obj, void *new_parent);
+int user_move(object_t *obj, void *new_parent);
+object_t *user_lookup(object_t *obj, string_t *name);
+
 
 int record_show_self(object_t *obj);
 int record_del(object_t *obj);

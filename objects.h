@@ -13,6 +13,7 @@ typedef struct obj_attr_s obj_attr_t;
 
 typedef int (*obj_op)(object_t *obj);
 typedef int (*obj_create)(object_t *parent, void *data);
+typedef object_t * (*obj_lookup)(object_t *obj, void *data);
 
 struct obj_attr_s {
     int         type;
@@ -21,6 +22,7 @@ struct obj_attr_s {
     obj_op      show_childs;
     obj_op      del;
     obj_op      write;
+	obj_lookup	lookup;
     obj_op      build;
 };
 

@@ -35,6 +35,7 @@ static obj_attr_t cla_attr = {
     .show_self = class_show_self,
     .show_childs = class_show_child,
     .write = class_write,
+    .lookup = class_lookup,
     .build = class_build
 };
 
@@ -44,6 +45,7 @@ static obj_attr_t user_attr = {
     .show_self = user_show_self,
     .show_childs = user_show_childs,
     .write = user_write,
+    .lookup = user_lookup,
     .build = user_build
 };
 
@@ -493,17 +495,28 @@ int class_del(object_t *obj) {
 
 object_t *class_lookup(object_t *obj, string_t *name) {
     class_t         *des_cla;
-    object_t        *des_obj;
+	user_t			*des_usr;
+	object_t        *des_obj;
+	
     list_for_each_entry(des_obj, &obj->childs, sibling) {
-        des_cla = obj_entry(des_obj, class_t, obj);
-        if (!strcmp(name, des_cla->name.str)) {
-            return des_obj;
-        }
+		if (des_obj->options->type == obj_type_cla) { 
+        	des_cla = obj_entry(des_obj, class_t, obj);
+        	if (!strcmp(name, des_cla->name.str)) {
+            	return des_obj;
+        	}
+		} else if (des_obj->options->type == obj_type_usr) {
+			des_usr = obj_entry(des_obj, user_t, obj);
+			if (!strcmp(name, des_usr->user_name.str)) {
+				return des_obj;
+			}
+		} else {
+			return NULL;
+		}
+		
     }
 
     return NULL;
 }
-
 
 /*
 int class_move(object_t *obj, object_t *parent) {
@@ -928,7 +941,7 @@ int user_del(object_t *obj){
     return OK;
 }
 
-int usr_move(object_t *obj, void *new_parent) {
+int user_move(object_t *obj, void *new_parent) {
     user_t          *new_usr;
     user_t          *old_usr;
     int              ret;
@@ -997,6 +1010,23 @@ USR_FAIL:
     free(new_usr);
 FAIL:
     return ERR;
+}
+
+object_t *user_lookup(object_t *obj, string_t *name) {
+	record_t			*des_rcd;
+	object_t			*des_obj;
+
+	list_for_each_entry(des_obj, &obj->childs, sibling) {
+		if (des_obj->options->type != obj_type_rcd) {
+			return NULL;
+		}
+		des_rcd = obj_entry(des_obj, record_t, obj);
+		if (!strcmp(name, des_rcd->other.str)) {
+			return des_obj;
+		}
+	}
+
+	return NULL;
 }
 
 int record_show_self(object_t *obj) {
