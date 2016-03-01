@@ -129,14 +129,149 @@ void exec_del(char * cmd) {
 
 void exec_add_class(char * name) {
 	//to complete
+	string_t		 path;
+	object_t		*tmp_obj;
+	int				 ret;
+	create_args_t	 arg;
+
+	path.str = name;
+	path.len = strlen(name);
+
+	if (current->options->type != obj_type_cla) {
+		printf("cannot create class in user or record\n");
+		return;
+	}
+
+	tmp_obj = current->options->lookup(current, (void *)&path);
+	if (tmp_obj) {
+		printf("the class exsists\n");
+		return;
+	}
+
+	init_create_arg(&arg);
+	arg.type = obj_type_cla;
+	arg.name.len = path.len;
+	arg.name.str = path.str;
+	ret = current->options->create(current, &arg);
+	if (ret != OK) {
+		printf("add class failed\n");
+	}
+
+	return;
 }
 
 void exec_add_user(char * name) {
 	//to complete
+	string_t		 path;
+	object_t		*tmp_obj;
+	int				 ret;
+	create_args_t	 arg;
+
+	path.str = name;
+	path.len = strlen(name);
+
+	if (current->options->type != obj_type_cla) {
+		printf("cannot create user in user or record\n");
+		return;
+	}
+
+	tmp_obj = current->options->lookup(current, (void *)&path);
+	if (tmp_obj) {
+		printf("the user exsists\n");
+		return;
+	}
+
+	init_create_arg(&arg);
+	arg.type = obj_type_usr;
+	arg.name.len = path.len;
+	arg.name.str = path.str;
+	ret = current->options->create(current, &arg);
+	if (ret != OK) {
+		printf("add user failed\n");
+	}
+
+	return;
 }
 
 void exec_add_record(char * name) {
 	//to complete
+	string_t		 path;
+	object_t		*tmp_obj;
+	char			*line;
+	size_t			 len;
+	int				 ret;
+	create_args_t	 arg;
+
+	path.str = name;
+	path.len = strlen(name);
+
+	if (current->options->type != obj_type_usr) {
+		printf("cannot create record in class or record\n");
+		return;
+	}
+	
+	tmp_obj = current->options->lookup(current, (void *)&path);
+	if (tmp_obj) {
+		printf("the user exsists\n");
+		return;
+	}
+
+	init_create_arg(&arg);
+	arg.type = obj_type_rcd;
+	arg.name.len = path.len;
+	arg.name.str = path.str;
+
+	printf("input cipher\n");
+	ret = getline(&line, &len, stdin); 
+	if (ret < 0) {
+		printf("get input error");
+		return;
+	}
+
+	arg.plain.len = len;
+	arg.plain.str = malloc((len + 1) * sizeof(char));
+	if (!arg.plain.str) {
+		goto PLAIN_FAIL;
+	}
+	
+	sprintf(arg.plain.str, "%s", line);
+	free(line);
+	line = NULL;
+
+	printf("input other\n");
+	ret = getline(&line, &len, stdin); 
+	if (ret < 0) {
+		printf("get input error");
+		line = NULL;
+		goto OTH_FAIL;
+	}
+
+	arg.other.len = len;
+	arg.other.str = malloc((len + 1) * sizeof(char));
+	if (!arg.other.str) {
+		goto OTH_FAIL;
+	}
+	sprintf(arg.other.str, "%s", line);
+	
+	ret = current->options->create(current, &arg);
+	if (ret != OK) {
+		printf("add user failed\n");
+	}
+
+	if (arg.other.len) {
+		free(arg.other.str);
+	}
+OTH_FAIL:
+	if (arg.plain.len) {
+		free(arg.plain.str);
+	}
+PLAIN_FAIL:
+	if (line) {
+		free(line);
+	}
+FAIL:
+	return;
+
 }
 
 
@@ -229,9 +364,7 @@ void parse_cmd() {
                 exec_del(line);
                 break;
             case add:
-                if (strncmp(line, "add", strlen("add"))) {
-                    printf("error options\n");
-                }
+                exec_add(line);
                 break;
             case ch:
                 if (strncmp(line, "ch", strlen("ch"))) {

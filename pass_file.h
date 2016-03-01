@@ -81,6 +81,13 @@ struct class_s {
     init_string(&(cla)->path);\
     (cla)->dir = NULL
 
+#define init_create_arg(arg) \
+	init_string(&(arg)->name);\
+	init_string(&(arg)->other);\
+	init_string(&(arg)->cipher);\
+	(arg)->type = 0;\
+	(arg)->info = NULL
+
 int init_root(string_t *path);
 object_t *get_root_obj();
 
