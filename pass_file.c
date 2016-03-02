@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #define max_other_len 2048
 #define max_cipher_len 2048
@@ -12,9 +13,12 @@
 #define dir_mode        0755
 #define file_mode       0755
 
+/*
+void decryption(record_t * record, char * passwd);
 void decryption(record_t *record, char *passwd) {
     printf("record passwd:\n%s\n", record->passwd_ciper.str);
 }
+*/
 /*
 struct obj_attr_s {
     int     type;
@@ -78,8 +82,10 @@ int init_root(string_t *path) {
     uchar              *path_str;
     DIR                *dir;
     int                 len;
+	int					ret;
+	class_t			   *root_p = &root;
 
-    init_class(&root);
+    init_class(root_p);
  
     if (!path) {
         getcwd(ab_path, sizeof(ab_path));
@@ -103,8 +109,8 @@ int init_root(string_t *path) {
         
     sprintf(path_str, "%s", ab_path); 
 
-    root.path.len = root.name.str = path_str;
-    root.path.str = root.name.len = len;
+    root.path.str = root.name.str = path_str;
+    root.path.len = root.name.len = len;
 
     dir = opendir(ab_path);
     if (!dir) {
@@ -1035,7 +1041,7 @@ int record_show_self(object_t *obj) {
     record = obj_entry(obj, record_t, obj);
     printf("record other info:\n%s\n", record->other.str);
 
-    decryption(record, passwd);
+    //decryption(record, passwd);
     return OK;
 }
 

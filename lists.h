@@ -4,7 +4,7 @@
 
 typedef struct list_head_s list_head_t;
 struct list_head_s {
-	struct list_head *next, *prev;
+	list_head_t *next, *prev;
 };
 
 
