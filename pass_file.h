@@ -74,12 +74,21 @@ struct class_s {
     INIT_LIST_HEAD(&(usr)->dirty_queue);\
     (usr)->record_num = 0;\
     (usr)->dirty = 0
-    
+/*    
 #define init_class(cla) \
-    init_obj(&(cla)->obj);\
-    init_string(&(cla)->name);\
-    init_string(&(cla)->path);\
-    (cla)->dir = NULL
+	do { \
+    init_obj(&(cla)->obj); \
+    init_string(&(cla)->name); \
+    init_string(&(cla)->path); \
+    (cla)->dir = NULL; \
+	} while(0)
+*/
+static inline void init_class(class_t *cla) {
+	init_obj(&(cla->obj));
+    init_string(&cla->name);
+    init_string(&cla->path);
+    cla->dir = NULL; 
+} 
 
 #define init_create_arg(arg) \
 	init_string(&(arg)->name);\

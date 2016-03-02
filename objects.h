@@ -39,12 +39,20 @@ struct object_s {
     (attr)->del = NULL;\
     (attr)->build = NULL;
 
-
+/*
 #define init_obj(obj) \
     (obj)->parent = NULL;\
     INIT_LIST_HEAD(&(obj)->sibling);\
     INIT_LIST_HEAD(&(obj)->childs);\
     (obj)->options = NULL
+*/
+static inline void init_obj(object_t *obj) {
+	obj->parent = NULL;\
+    INIT_LIST_HEAD(&obj->sibling);\
+    INIT_LIST_HEAD(&obj->childs);\
+    obj->options = NULL;
+}
+
 
 #define add_obj(parent, child) \
     (child)->parent = (parent);\
