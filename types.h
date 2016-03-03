@@ -19,10 +19,15 @@ typedef struct hash_s {
     elements    *elt;
 } hash_t;
 */
-
+/*
 #define init_string(str)\
     (str)->str = NULL;\
     (str)->len = 0
+*/
+static inline void init_string(string_t *str) {
+	str->str = NULL;
+    str->len = 0;
+}
 #define NULL_STRING(name)\
     string_t name = {.str = NULL, .len = 0}
 

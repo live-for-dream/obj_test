@@ -20,7 +20,7 @@ struct obj_attr_s {
     obj_create  create;
     obj_op      show_self;
     obj_op      show_childs;
-    obj_op      del;
+    obj_op      delete;
     obj_op      write;
 	obj_lookup	lookup;
     obj_op      build;
@@ -54,9 +54,16 @@ static inline void init_obj(object_t *obj) {
 }
 
 
+/*
 #define add_obj(parent, child) \
     (child)->parent = (parent);\
     list_add(&(child)->sibling, &(parent)->childs)
+*/
+
+static inline void add_obj(object_t *parent, object_t *child) {
+	child->parent = parent;
+    list_add(&child->sibling, &parent->childs);
+}
 
 #define del_obj(child)\
     list_del(&(child)->sibling);\

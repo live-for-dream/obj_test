@@ -62,8 +62,8 @@ struct class_s {
 
 
 #define init_record(record) \
-    init_string((record)->passwd_ciper);\
-    init_string((record)->other)\
+    init_string(&(record)->passwd_ciper);\
+    init_string(&(record)->other);\
     (record)->total_len = (record)->next_off = 0;\
     init_obj(&record->obj)
 
@@ -84,7 +84,7 @@ struct class_s {
 	} while(0)
 */
 static inline void init_class(class_t *cla) {
-	init_obj(&(cla->obj));
+	init_obj(&cla->obj);
     init_string(&cla->name);
     init_string(&cla->path);
     cla->dir = NULL; 
@@ -93,11 +93,12 @@ static inline void init_class(class_t *cla) {
 #define init_create_arg(arg) \
 	init_string(&(arg)->name);\
 	init_string(&(arg)->other);\
-	init_string(&(arg)->cipher);\
-	(arg)->type = 0;\
-	(arg)->info = NULL
+	init_string(&(arg)->plain);\
+	(arg)->type = 0
 
 int init_root(string_t *path);
+int init_objs_tree(object_t *obj);
+
 object_t *get_root_obj();
 
 int insert_record();

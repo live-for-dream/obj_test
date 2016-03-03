@@ -1,4 +1,5 @@
 #include "pass_file.h"
+#include <stdlib.h>
 
 //"cd <path>"  change dir
 //open <path/file/record>
@@ -13,6 +14,8 @@
 #define add         0xc5      // 'a' + 'd'
 #define ch          0xcb      // 'c' + 'h'
 #define root_path       "/home/centos-dev/test"
+
+object_t        *current;
 
 void exec_cd(char *cmd) {
     char 			*tmp;
@@ -58,6 +61,7 @@ void exec_cd(char *cmd) {
 	tmp_obj = current->options->lookup(current, (void *)&path);
 	if (!tmp_obj) {
 		printf("no such path\n");
+		return;
 	}
 
 	current = tmp_obj;
@@ -71,6 +75,7 @@ void exec_open(char *cmd) {
 	char 			*tmp;
 	string_t		 path;
 	object_t		*tmp_obj;
+	int				 ret;
 	
 	if (strncmp(cmd, "open", strlen("open"))) {
         printf("error options\n");
@@ -101,6 +106,7 @@ void exec_del(char * cmd) {
 	char 			*tmp;
 	string_t		 path;
 	object_t		*tmp_obj;
+	int				 ret;
 	
 	if (strncmp(cmd, "del", strlen("del"))) {
         printf("error options\n");
@@ -121,9 +127,10 @@ void exec_del(char * cmd) {
 	tmp_obj = current->options->lookup(current, (void *)&path);
 	if (!tmp_obj) {
 		printf("no such obj\n");
+		return;
 	}
 
-	ret = tmp_obj->options->del(tmp_obj);
+	ret = tmp_obj->options->delete(tmp_obj);
 	return;
 }
 
@@ -374,14 +381,18 @@ void parse_cmd() {
             default:
                 printf("error options\n");
         }
+		if (line) {
+			free(line);
+			line = NULL;
+		}
     }
 }
 
-object_t        *current;
 int main(int argc, char *argv[]) {
     string_t        path;
+	int				ret;
     
-    init_string(path);
+    init_string(&path);
     if (argc < 2) {
         init_root(NULL);
     } else {
@@ -389,7 +400,11 @@ int main(int argc, char *argv[]) {
         path.len = strlen(argv[1]);
         init_root(&path);
     }
-
+	
     current = get_root_obj();
+	ret = init_objs_tree(current);
+	if (ret != OK) {
+		return ret;
+	}
     parse_cmd();
 }

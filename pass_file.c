@@ -38,6 +38,7 @@ static obj_attr_t cla_attr = {
     .create = class_create,
     .show_self = class_show_self,
     .show_childs = class_show_child,
+    .delete = class_del,
     .write = class_write,
     .lookup = class_lookup,
     .build = class_build
@@ -48,6 +49,7 @@ static obj_attr_t user_attr = {
     .create = user_create,
     .show_self = user_show_self,
     .show_childs = user_show_childs,
+    .delete = user_del,
     .write = user_write,
     .lookup = user_lookup,
     .build = user_build
@@ -55,6 +57,7 @@ static obj_attr_t user_attr = {
 
 static obj_attr_t record_attr = {
     .type = obj_type_rcd,
+	.delete = record_del,
     .build = NULL
 };
 
@@ -127,7 +130,8 @@ int init_root(string_t *path) {
         }
     }
 
-    root.dir = dir;
+	close(dir);
+    root.dir = NULL;
     root.obj.options = &cla_attr;    
 }
 
@@ -135,51 +139,6 @@ object_t *get_root_obj() {
     return &root.obj;
 }
 
-
-/*
-int start_record_tree(string_t *path) {
-    char                ab_path[PATH_MAX + 1];
-    int                 p_len;
-    DIR                *dir;
-    struct dirent      *p_dirent;
-
-    if (!path || !path->len) {
-        getcwd(ab_path, sizeof(ab_path));
-        if (errno) {
-            return ERR;
-        }
-    } else {
-        sprintf(ab_path, "%s", (char *)path->str);
-        ab_path[path->len] = '\0';
-    }
-
-    p_len = strlen(ab_path);
-    init_class(&root);
-    root.path.len = p_len;
-    root.path.str = malloc(sizeof(uchar) *p_len + 1);
-    if (!root.path.str) {
-        return ERR_NOMEM;
-    }
-    sprintf((char *)root.path.str, "%s", ab_path);
-    root.path.str[p_len] = '\0';
-    
-    dir = opendir(ab_path);
-    if (!dir) {
-        return ERR;
-    }
-
-    root.dir = dir;
-    while((p_dirent=readdir(dir))) {
-        if (p_dirent->d_type & DT_REG) {
-            
-        } else if (p_dirent->d_type & DT_DIR) {
-            
-        }
-        printf("%s\n",p_dirent->d_name);
-    }
-    
-}
-*/
 
 static void get_class_path(object_t *obj, string_t *path) {
     class_t *cla; 
@@ -216,7 +175,7 @@ int class_build(object_t *obj) {
     string_t            hex_name;
     
     
-    path.str = (uchar)ab_path;
+    path.str = (uchar *)ab_path;
     path.len = 0;
     cla = obj_entry(obj, class_t, obj);
     get_class_path(obj, &path);
@@ -229,7 +188,7 @@ int class_build(object_t *obj) {
     cla->dir = dir;
     while((p_dirent=readdir(dir))) {
         if (p_dirent->d_type & DT_DIR) {
-            if (!strcmp(p_dirent->d_name, ".") || !strcmp(p_dirent->d_name, ".")) {
+            if (!strcmp(p_dirent->d_name, ".") || !strcmp(p_dirent->d_name, "..")) {
                 continue;
             }
 
@@ -244,6 +203,7 @@ int class_build(object_t *obj) {
             }
 
             sprintf(new_cla->path.str, "%s", p_dirent->d_name);
+			new_cla->path.len = strlen(p_dirent->d_name);
             init_obj(&new_cla->obj);
             add_obj(obj, &new_cla->obj);
             new_cla->obj.options = &cla_attr;
@@ -283,7 +243,7 @@ int class_show_self(object_t *obj) {
 static int show_childs(object_t *obj) {
     object_t *next_obj;
     int       ret;
-    list_for_each_entry(next_obj, &obj->childs, childs) {
+    list_for_each_entry(next_obj, &obj->childs, sibling) {
         ret = next_obj->options->show_self(next_obj);
         if (ret != OK) {
             return ERR;
@@ -301,7 +261,7 @@ static int create_class(object_t *parent, create_args_t *arg) {
     int              ret;
     
 
-    path.str = (uchar)ab_path;
+    path.str = (uchar *)ab_path;
     path.len = 0;
     get_class_path(parent, &path);
 
@@ -355,7 +315,7 @@ static int create_user(object_t *parent, create_args_t *arg) {
     int              ret;
     int              fd;
 
-    path.str = (uchar)ab_path;
+    path.str = (uchar *)ab_path;
     path.len = 0;
     get_class_path(parent, &path);
 
@@ -391,7 +351,7 @@ static int create_user(object_t *parent, create_args_t *arg) {
         goto FILE_FAIl;
     }
 
-    usr->file_name.str = file_name.str
+    usr->file_name.str = file_name.str;
     usr->file_name.len = file_name.len;
     usr->record_num = 0;
     usr->user_name.str = malloc(sizeof(uchar) * (arg->name.len + 1));
@@ -455,8 +415,9 @@ int class_del(object_t *obj) {
     object_t        *child_obj;
     string_t         path;
     char             ab_path[PATH_MAX + 1];
+	int				 ret;
 
-    list_for_each_entry(child_obj, obj->childs, sibling) {
+    list_for_each_entry(child_obj, &obj->childs, sibling) {
         if (child_obj->options->type == obj_type_cla) {
             ret = class_del(child_obj);
             if (ret != OK) {
@@ -474,10 +435,10 @@ int class_del(object_t *obj) {
 
     cla = obj_entry(obj, class_t, obj);
     path.len = 0;
-    path.str = ab_path;
+    path.str = (uchar *)ab_path;
     get_class_path(obj, &path);
 
-    list_del(obj->sibling);
+    list_del(&obj->sibling);
     ret = closedir(cla->dir);
     if (!ret) {
         printf("close_dir fail\n");
@@ -507,12 +468,12 @@ object_t *class_lookup(object_t *obj, string_t *name) {
     list_for_each_entry(des_obj, &obj->childs, sibling) {
 		if (des_obj->options->type == obj_type_cla) { 
         	des_cla = obj_entry(des_obj, class_t, obj);
-        	if (!strcmp(name, des_cla->name.str)) {
+        	if (!strcmp(name->str, des_cla->path.str)) {
             	return des_obj;
         	}
 		} else if (des_obj->options->type == obj_type_usr) {
 			des_usr = obj_entry(des_obj, user_t, obj);
-			if (!strcmp(name, des_usr->user_name.str)) {
+			if (!strcmp(name->str, des_usr->user_name.str)) {
 				return des_obj;
 			}
 		} else {
@@ -625,7 +586,7 @@ int record_read(int fd, record_t **record_r, off_t off) {
 
     off += 8;
     size = (ssize_t)ret;
-    ret = read_file(fd, buf, size, off)
+    ret = read_file(fd, buf, size, off);
     if (ret != size) {
         goto CIPHER_FAIL;
     }
@@ -658,7 +619,7 @@ int record_read(int fd, record_t **record_r, off_t off) {
 
     off += 8;
     size = (ssize_t)ret;
-    ret = read_file(fd, buf, size, off)
+    ret = read_file(fd, buf, size, off);
     if (ret != size) {
         goto OTHER_FAIL;
     }
@@ -733,7 +694,7 @@ OUT:
     return write_n;
 
 FAIL:
-    retrun ERR;
+    return ERR;
 }
 
 int user_build(object_t *obj) {
@@ -786,7 +747,7 @@ int user_show_self(object_t *obj) {
     user_t             *usr;
 
     usr = obj_entry(obj, user_t, obj);
-    printf("user name:\n")
+    printf("user name:\n");
 }
 
 int user_show_childs(object_t * obj) {
@@ -863,6 +824,7 @@ int user_write(object_t *obj) {
     int             fd;
     user_t         *usr;
     record_t       *record;
+	object_t	   *rcd_obj;
     char            ab_path[PATH_MAX + 1];
     char            len_buff[9];
     string_t        path;
@@ -872,7 +834,7 @@ int user_write(object_t *obj) {
     usr = obj_entry(obj, user_t, obj);
     path.len = 0;
     path.str = ab_path;
-    get_user_path(object_t * obj,string_t * path);
+    get_user_path(obj, &path);
 
     fd = open(path.str, O_RDWR | O_TRUNC);
     if (fd < 0) {
@@ -887,7 +849,8 @@ int user_write(object_t *obj) {
     }
 
     off += 8;
-    list_for_each_entry(record, &obj->childs, obj) {
+    list_for_each_entry(rcd_obj, &obj->childs, sibling) {
+		record = obj_entry(rcd_obj, record_t, obj);
         ret = record_write(fd, record, off);
         if (ret < 0) {
             goto FD_FAIL;
@@ -951,10 +914,12 @@ int user_move(object_t *obj, void *new_parent) {
     user_t          *new_usr;
     user_t          *old_usr;
     int              ret;
+	object_t		*new_p;
     char             ab_path[PATH_MAX + 1];
     string_t         path;
-    
-    if (parent->options->type != obj_type_cla) {
+
+	new_p = (object_t *)new_parent;
+    if (new_p->options->type != obj_type_cla) {
         goto FAIL;
     }
 
@@ -996,9 +961,9 @@ int user_move(object_t *obj, void *new_parent) {
     
     new_usr->record_num = old_usr->record_num;
     new_usr->obj.options = old_usr->obj.options;
-    new_usr->obj.parent = new_parent;
+    new_usr->obj.parent = new_p;
     list_replace(&new_usr->obj.childs, &old_usr->obj.childs);
-    list_add(&new_usr->obj.sibling, &new_parent->childs);
+    list_add(&new_usr->obj.sibling, &new_p->childs);
 
     if (old_usr->dirty) {
         clean_user_dirty(old_usr);
@@ -1131,5 +1096,28 @@ OTH_FAIL:
     record->other.len = oth_str.len;
 FAIL:
     return ERR;
+}
+
+int init_objs_tree(object_t *obj) {
+	object_t		*tmp_obj;
+	int				 ret;
+
+	if (obj->options->type == obj_type_rcd) {
+		return OK;
+	}
+
+	ret = obj->options->build(obj);
+	if (ret != OK) {
+		return ret;
+	}
+	
+	list_for_each_entry(tmp_obj, &obj->childs, sibling) {
+		ret = init_objs_tree(tmp_obj);
+		if (ret != OK) {
+			return ret;
+		}
+	}
+
+	return OK;
 }
 
