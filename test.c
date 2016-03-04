@@ -7,7 +7,7 @@
 //del   <path/file/record>
 //add  <class|user|record> <name>
 
-
+#define list		0xd5	  // 'l' + 'd'
 #define cd          0xc7      // 'c' + 'd'
 #define open        0xdf      // 'o' + 'p'
 #define del         0xc9      // 'd' + 'e'
@@ -348,6 +348,27 @@ void exec_add(char * cmd) {
 	return;
 }
 
+void exec_ls(char *cmd) {
+	char 			*tmp;
+	int				 ret;
+
+	if (strncmp(cmd, "list", strlen("list"))) {
+		printf("error options\n");
+	}
+
+	tmp = cmd + 4;
+    while(*tmp == ' ' || *tmp == '\n') {
+        tmp++;
+    }
+
+	if (*tmp) {
+		printf("error option format");
+		return;
+	}
+
+	ret = current->options->show_childs(current);
+	return;
+}
 
 void parse_cmd() {
     char        *line;
@@ -373,10 +394,8 @@ void parse_cmd() {
             case add:
                 exec_add(line);
                 break;
-            case ch:
-                if (strncmp(line, "ch", strlen("ch"))) {
-                    printf("error options\n");
-                }
+            case list:
+                exec_ls(line);
                 break;
             default:
                 printf("error options\n");

@@ -747,7 +747,8 @@ int user_show_self(object_t *obj) {
     user_t             *usr;
 
     usr = obj_entry(obj, user_t, obj);
-    printf("user name:\n");
+    printf("user name: %s\n", usr->user_name.str);
+	return OK;
 }
 
 int user_show_childs(object_t * obj) {
